@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace SingboxProxyParser;
 
-class Program
+internal class Program
 {
     private static readonly SemaphoreSlim _fileSemaphore = new(1, 1);
     private static readonly string _outputFile = "files/proxies.txt";
@@ -57,7 +57,7 @@ class Program
         _logger.LogInformation($"\nParsing completed. Processed {_urlsProcessed} URLs | Found {_proxiesParsed} proxies");
         _logger.LogInformation("Press any key to continue...");
         Console.ReadKey();
-        _serviceProvider.Dispose();
+        await _serviceProvider.DisposeAsync();
     }
     
 

@@ -10,18 +10,11 @@ public interface IFileService
     Task RemoveDuplicatedStringsAsync(string fileName);
 }
 
-public class FileService : IFileService
+public class FileService(ILogger<FileService> logger) : IFileService
 {
-    private readonly ILogger<FileService> _logger;
-
-    public FileService(ILogger<FileService> logger)
-    {
-        _logger = logger;
-    }
-
     public async Task RemoveDuplicatedStringsAsync(string fileName)
     {
-        _logger.LogInformation("Removing duplicates...");
+        logger.LogInformation("Removing duplicates...");
         var tempFile = Path.GetTempFileName();
         var buffer = ArrayPool<string>.Shared.Rent(10000);
         var hashes = new HashSet<string>(capacity: 1_000_000);
@@ -33,19 +26,19 @@ public class FileService : IFileService
             {
                 while (!reader.EndOfStream)
                 {
-                    int count = 0;
-                    // Чтение блока строк
+                    var count = 0;
+                    // Reading block of strings
                     for (; count < buffer.Length && !reader.EndOfStream; count++)
                     {
                         buffer[count] = await reader.ReadLineAsync() ?? string.Empty;
                     }
 
-                    // Обработка блока
+                    // Block processing
                     foreach (var line in buffer.Take(count))
                     {
                         if (string.IsNullOrEmpty(line)) continue;
 
-                        // Хеширование с минимальными аллокациями
+                        // Hashing 
                         var hash = GetLineHash(line);
                         if (hashes.Add(hash))
                         {
@@ -62,6 +55,29 @@ public class FileService : IFileService
         {
             ArrayPool<string>.Shared.Return(buffer);
         }
+        // Validate proxy link
+        string[] validPrefixes =
+        [
+            "vmess", "vless", "ss", "trojan",
+            "socks4", "socks5", "tuic",
+            "hysteria", "hysteria2", "naive"
+        ];
+        var tempFilePath = Path.GetTempFileName();
+        using (var reader = new StreamReader(fileName))
+        await using (var writer = new StreamWriter(tempFilePath))
+        {
+            while (await reader.ReadLineAsync() is { } line)
+            {
+                var isValid = validPrefixes.Any(prefix => line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+                if (isValid)
+                {
+                    await writer.WriteLineAsync(line);
+                }
+            }
+        }
+
+        File.Delete(fileName);
+        File.Move(tempFilePath, fileName);
     }
     private static string GetLineHash(string line)
     {

@@ -3,22 +3,16 @@ using System.Text.RegularExpressions;
 
 namespace SingboxProxyParser;
 
-public class ProxyParser : IProxyParser
+public class ProxyParser(IHttpClientFactory httpClientFactory) : IProxyParser
 {
     private static readonly Regex _proxyRegex = new(
-        @"\b(vmess|vless|ss|trojan|socks4|socks5|tuic|http|https|hysteria|hysteria2|naive|)://[^\s]+",
+        @"\b(vmess|vless|ss|trojan|socks4|socks5|tuic|hysteria|hysteria2|naive|)://[^\s]+",
         RegexOptions.Compiled);
     //https://github.com/SagerNet/sing-box
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    public ProxyParser(IHttpClientFactory httpClientFactory)
-    {
-        _httpClientFactory = httpClientFactory;
-    }
 
     public async Task<List<string>> ParseProxiesAsync(string url, CancellationToken ct)
     {
-        using var client = _httpClientFactory.CreateClient();
+        using var client = httpClientFactory.CreateClient();
         using var response = await client.GetAsync(url, ct);
 
         if (!response.IsSuccessStatusCode)
